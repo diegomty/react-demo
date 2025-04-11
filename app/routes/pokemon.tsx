@@ -1,42 +1,66 @@
-import { useState } from "react";
-import PokemonCard from "./components/PokemonCard";
+import { useState, useEffect } from "react";
 import type { PokeResponse } from "./interfaces/pokemon";
 
-//definimos la ruta de pokemon  
+const API_URL = "https://pokeapi.co/api/v2/";
+
 export default function PokemonRoute() {
-  const [data, setData] = useState<PokeResponse | undefined>();//declaracion de variable de estado y funcion
+  const [pokemonList, setPokemonList] = useState<PokeResponse[]>([]);// Estado para almacenar la lista de Pokémon
+
+  useEffect(() => {
+    async function obtenerPokemon() {
+      // Obtener la cantidad total de Pokémon
+      const countResponse = await fetch(`${API_URL}/pokemon-species`);
+      const countData = await countResponse.json();
+      const totalPokemonCount = countData.count;
+
+      const response = await fetch(`${API_URL}/pokemon?limit=${totalPokemonCount}`); // Obtiene todos los Pokémon
+      const data = await response.json();
+      const pokemonDetails = await Promise.all(
+        data.results.map(async (pokemon: { url: string; }) => {
+          const response = await fetch(pokemon.url);
+          return await response.json();
+        })
+      );
+      setPokemonList(pokemonDetails);
+    }
+
+    obtenerPokemon();
+  }, []);
 
   return (
     <div className="text-5xl">
-      <p className="bg-blue-600 text-white py-2 text-center">Buscador de Pokémon</p>
-      <div className="flex flex-row">
-        <PokemonCard data={data} setData={setData} /> {/* Pass data and setData to PokemonCard */}
-        <div className="ml-4"> {/* Contenedor para la informacion de pokemon. la clase m1-4 agregara  un margen izquierdo para separalo visualmente */}
-          <p>Datos:</p>
-          {data && (
-            <ul>
-              <li>Name: {data.name}</li>
-              <li>ID: {data.id}</li>
-              <li>Height: {data.height}</li>
-              <li>Weight: {data.weight}</li>
-              <li>
+      <p className="bg-blue-600 text-white py-2 text-center">Lista de Pokémon</p>
+      <div className="flex justify-end"> {/* Cambiado a flex sin wrap y añadido justify-end */}
+        <div className="flex flex-wrap justify-start w-3/4"> {/* Contenedor para la lista, ocupa 3/4 del ancho */}
+          {pokemonList.map((pokemon) => (
+            <div key={pokemon.id} className="w-64 p-4 m-4 border rounded">
+              <img
+                src={pokemon.sprites?.front_default}
+                alt={pokemon.name}
+                className="mx-auto"
+              />
+              <p className="text-center text-xl font-bold">{pokemon.name}</p>
+              <p>ID: {pokemon.id}</p>
+              <p>Height: {pokemon.height}</p>
+              <p>Weight: {pokemon.weight}</p>
+              <div>
                 Types:
                 <ul>
-                  {data.types?.map((type, index) => (
+                  {pokemon.types?.map((type, index) => (
                     <li key={index}>{type.type.name}</li>
                   ))}
                 </ul>
-              </li>
-              <li>
+              </div>
+              <div>
                 Abilities:
                 <ul>
-                  {data.abilities?.map((ability, index) => (
+                  {pokemon.abilities?.map((ability, index) => (
                     <li key={index}>{ability.ability?.name || "Unknown Ability"}</li>
                   ))}
                 </ul>
-              </li>
-            </ul>
-          )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
